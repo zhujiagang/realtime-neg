@@ -52,7 +52,7 @@ parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to tra
 parser.add_argument('--ngpu', default=1, type=str2bool, help='Use cuda to train model')
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument('--stepvalues', default='30000,60000,100000', type=str, help='iter numbers where learing rate to be dropped')
+parser.add_argument('--stepvalues', default='100000000', type=str, help='iter numbers where learing rate to be dropped')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
@@ -223,36 +223,36 @@ def train(args, net, optimizer, criterion, scheduler):
             if iteration > args.max_iter:
                 break
             iteration += 1
-            # if args.cuda:
-            #     images = Variable(images.cuda())
-            #     targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
-            # else:
-            #     images = Variable(images)
-            #     targets = [Variable(anno, volatile=True) for anno in targets]
-            # # forward
-            # out = net(images)
-            # # backprop
-            # optimizer.zero_grad()
-            #
-            # loss_l, loss_c = criterion(out, targets)
-            # if loss_l.data.cpu().numpy() == 0:
-            #     loss = loss_c
-            # else:
-            #     loss = loss_l + loss_c
-            #
-            # loss.backward()
-            # if args.clip_gradient is not None:
-            #     total_norm = clip_grad_norm(net.parameters(), args.clip_gradient)
-            #     if total_norm > args.clip_gradient:
-            #         print("clipping gradient: {} with coef {}".format(total_norm, args.clip_gradient / total_norm))
-            # optimizer.step()
-            # scheduler.step()
-            # loc_loss = loss_l.data[0]
-            # conf_loss = loss_c.data[0]
-            # # print('Loss data type ',type(loc_loss))
-            # loc_losses.update(loc_loss)
-            # cls_losses.update(conf_loss)
-            # losses.update((loc_loss + conf_loss)/2.0)
+            if args.cuda:
+                images = Variable(images.cuda())
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
+            else:
+                images = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
+            # forward
+            out = net(images)
+            # backprop
+            optimizer.zero_grad()
+
+            loss_l, loss_c = criterion(out, targets)
+            if loss_l.data.cpu().numpy() == 0:
+                loss = loss_c
+            else:
+                loss = loss_l + loss_c
+
+            loss.backward()
+            if args.clip_gradient is not None:
+                total_norm = clip_grad_norm(net.parameters(), args.clip_gradient)
+                if total_norm > args.clip_gradient:
+                    print("clipping gradient: {} with coef {}".format(total_norm, args.clip_gradient / total_norm))
+            optimizer.step()
+            scheduler.step()
+            loc_loss = loss_l.data[0]
+            conf_loss = loss_c.data[0]
+            # print('Loss data type ',type(loc_loss))
+            loc_losses.update(loc_loss)
+            cls_losses.update(conf_loss)
+            losses.update((loc_loss + conf_loss)/2.0)
 
 
             if iteration % args.print_step == 0 and iteration>0:
@@ -418,7 +418,7 @@ def validate(args, net, val_data_loader, val_dataset, iteration_num, iou_thresh=
             torch.cuda.synchronize()
             te = time.perf_counter()
             print('NMS stuff Time {:0.3f}'.format(te - tf))
-        break
+
     print('Evaluating detections for itration number ', iteration_num)
     return evaluate_detections(gt_boxes, det_boxes, CLASSES, iou_thresh=iou_thresh)
 
